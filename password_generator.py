@@ -1,86 +1,171 @@
 import string
-from random import randint, choice
+from random import choice
 from tkinter import *
+from tkinter import ttk
+import tkinter as tk
+from tkinter import messagebox
 
-def Noah_generate_password():
-    length = int(length_var.get())
-    include_special_chars = special_chars_var.get()
+BG_COLOR = "#2d3748"
+SECONDARY_COLOR = "#4a5568"
+ACCENT_COLOR = "#4299e1"
+TEXT_COLOR = "#f7fafc"
+ENTRY_COLOR = "#1a202c"
+HOVER_COLOR = "#3182ce"
 
-    all_chars = string.ascii_letters + string.digits
-    if include_special_chars:
-        all_chars += string.punctuation
+def generate_password():
+    try:
+        length = int(length_var.get())
+        include_special_chars = special_chars_var.get()
+        include_numbers = numbers_var.get()
+        include_uppercase = uppercase_var.get()
 
-    password = "".join(choice(all_chars) for _ in range(length))
-    
-    password_entry.delete(0, END)
-    password_entry.insert(0, password)
+        all_chars = string.ascii_lowercase
+        if include_uppercase:
+            all_chars += string.ascii_uppercase
+        if include_numbers:
+            all_chars += string.digits
+        if include_special_chars:
+            all_chars += string.punctuation
 
-    app_name = app_name_entry.get().strip()
-    if app_name:
-        try:
-            with open("mesmotdepasse.txt", "a+") as file:
-                file.write(f"{app_name} : {password}\n")
-        except IOError:
-            print("Erreur lors de l'écriture dans le fichier.")
+        if not all_chars:
+            messagebox.showwarning("Attention", "Veuillez sélectionner au moins un type de caractères")
+            return
+
+        password = "".join(choice(all_chars) for _ in range(length))
+        
+        password_entry.delete(0, END)
+        password_entry.insert(0, password)
+        password_entry.config(fg=ACCENT_COLOR)
+
+        app_name = app_name_entry.get().strip()
+        if app_name:
+            try:
+                with open("mesmotdepasse.txt", "a+", encoding='utf-8') as file:
+                    file.write(f"{app_name} : {password}\n")
+                status_label.config(text="Mot de passe enregistré!", fg="#48bb78")
+            except IOError:
+                status_label.config(text="Erreur d'enregistrement", fg="#e53e3e")
+        else:
+            status_label.config(text="Entrez un nom d'application", fg="#e53e3e")
+            
+        generate_button.config(text="✓ Généré!")
+        window.after(1500, lambda: generate_button.config(text="Générer mot de passe"))
+        
+    except ValueError:
+        messagebox.showerror("Erreur", "La longueur doit être un nombre valide")
+
+def copy_to_clipboard():
+    window.clipboard_clear()
+    window.clipboard_append(password_entry.get())
+    status_label.config(text="Copié dans le presse-papier!", fg="#48bb78")
+    window.after(2000, lambda: status_label.config(text="", fg=TEXT_COLOR))
+
+def toggle_advanced():
+    if advanced_frame.winfo_ismapped():
+        advanced_frame.grid_remove()
+        toggle_button.config(text="Options avancées ▼")
     else:
-        print("Veuillez entrer le nom de l'application.")
+        advanced_frame.grid()
+        toggle_button.config(text="Options avancées ▲")
 
-window = Tk()
-window.title("🔑 Générateur de Mot de Passe 🔑")
-window.config(background='#1e1e2f')
+def on_closing():
+    if messagebox.askokcancel("Quitter", "Voulez-vous vraiment quitter?"):
+        window.destroy()
 
-frame = Frame(window, bg='#1e1e2f')
-width, height = 612, 512
-image = PhotoImage(file="logoge.png").zoom(20).subsample(32)
-canvas = Canvas(frame, width=width, height=height, bg='#1e1e2f', bd=0, highlightthickness=0)
-canvas.create_image(width/2, height/2, image=image)
-canvas.grid(row=0, column=0, sticky=W)
+window = tk.Tk()
+window.title("Gen Password")
+window.geometry("800x600")
+window.resizable(False, False)
+window.configure(bg=BG_COLOR)
+window.protocol("WM_DELETE_WINDOW", on_closing)
 
-right_frame = Frame(frame, bg='#1e1e2f')
+style = ttk.Style()
+style.theme_use('clam')
+style.configure('TFrame', background=BG_COLOR)
+style.configure('TLabel', background=BG_COLOR, foreground=TEXT_COLOR)
+style.configure('TButton', background=ACCENT_COLOR, foreground=TEXT_COLOR, 
+                font=('Helvetica', 12, 'bold'), borderwidth=0)
+style.map('TButton', background=[('active', HOVER_COLOR), ('pressed', HOVER_COLOR)])
 
-app_name_label = Label(right_frame, text="Nom de l'application", font=("Arial", 18, "bold"), bg='#1e1e2f', fg='#f1f1f1')
-app_name_label.pack(pady=(10, 5))
+header_frame = ttk.Frame(window, style='TFrame')
+header_frame.pack(pady=(20, 10))
 
-app_name_entry = Entry(right_frame, font=("Arial", 18), bg='#2c2c3e', fg='#f1f1f1', insertbackground='white', borderwidth=2, relief="groove")
-app_name_entry.pack(pady=(0, 15), ipady=5)
+title_label = ttk.Label(header_frame, text="Gen Password", font=('Helvetica', 28, 'bold'), 
+                       foreground=ACCENT_COLOR, background=BG_COLOR)
+title_label.pack()
 
-length_label = Label(right_frame, text="Longueur du mot de passe", font=("Arial", 18, "bold"), bg='#1e1e2f', fg='#f1f1f1')
-length_label.pack(pady=(15, 5))
+subtitle_label = ttk.Label(header_frame, text="Générateur de mots de passe sécurisés", 
+                          font=('Helvetica', 12), foreground=TEXT_COLOR)
+subtitle_label.pack(pady=(5, 0))
 
-length_var = StringVar(value="12")
-length_menu = OptionMenu(right_frame, length_var, *[str(i) for i in range(10, 51)])
-length_menu.config(font=("Arial", 14), bg='#2c2c3e', fg='#f1f1f1', highlightthickness=0)
-length_menu.pack(pady=(0, 15))
+main_frame = ttk.Frame(window, style='TFrame')
+main_frame.pack(pady=20, padx=40, fill='both', expand=True)
 
-special_chars_var = BooleanVar(value=True)
-special_chars_check = Checkbutton(
-    right_frame, text="Inclure des caractères spéciaux", 
-    variable=special_chars_var, font=("Arial", 14), bg='#1e1e2f', fg='#f1f1f1', 
-    selectcolor='#2c2c3e', activebackground='#1e1e2f', activeforeground='#f1f1f1'
-)
-special_chars_check.pack(pady=(0, 15))
+app_name_label = ttk.Label(main_frame, text="Pour quel service?", font=('Helvetica', 12))
+app_name_label.grid(row=0, column=0, sticky='w', pady=(0, 5))
 
-password_label = Label(right_frame, text="Mot de passe", font=("Arial", 18, "bold"), bg='#1e1e2f', fg='#f1f1f1')
-password_label.pack(pady=(15, 5))
+app_name_entry = ttk.Entry(main_frame, font=('Helvetica', 12), width=30)
+app_name_entry.grid(row=1, column=0, columnspan=2, pady=(0, 15), sticky='ew')
 
-password_entry = Entry(right_frame, font=("Arial", 18), bg='#2c2c3e', fg='#f1f1f1', insertbackground='white', borderwidth=2, relief="groove")
-password_entry.pack(pady=(0, 15), ipady=5)
+length_label = ttk.Label(main_frame, text="Longueur du mot de passe", font=('Helvetica', 12))
+length_label.grid(row=2, column=0, sticky='w', pady=(10, 5))
 
-generate_password_button = Button(
-    right_frame, text="Générer mon mot de passe",
-    font=("Arial", 18, "bold"), bg='#3b8d99', fg='white', activebackground='#4fa7b2', activeforeground='white', command=Noah_generate_password
-)
-generate_password_button.pack(fill=X, pady=(10, 20))
+length_var = tk.StringVar(value="16")
+length_scale = ttk.Scale(main_frame, from_=8, to=32, variable=length_var, 
+                        command=lambda v: length_value.config(text=f"{int(float(v))}"))
+length_scale.grid(row=3, column=0, sticky='ew', pady=(0, 5))
 
-right_frame.grid(row=0, column=1, sticky=W)
-frame.pack(expand=YES)
+length_value = ttk.Label(main_frame, text="16", font=('Helvetica', 12), width=3)
+length_value.grid(row=3, column=1, sticky='w', padx=(10, 0))
 
-Noah_BarMenu = Menu(window)
-Noah_FileMenu = Menu(Noah_BarMenu, tearoff=0, bg='#2c2c3e', fg='#f1f1f1')
-Noah_FileMenu.add_command(label="Nouveau mot de passe", command=Noah_generate_password)
-Noah_FileMenu.add_command(label="Mes liens")
-Noah_FileMenu.add_command(label="Quitter", command=window.quit)
-Noah_BarMenu.add_cascade(label="Fichier", menu=Noah_FileMenu)
-window.config(menu=Noah_BarMenu)
+toggle_button = ttk.Button(main_frame, text="Options avancées ▼", 
+                          command=toggle_advanced, style='TButton')
+toggle_button.grid(row=4, column=0, pady=(20, 5), sticky='w')
+
+advanced_frame = ttk.Frame(main_frame, style='TFrame')
+
+special_chars_var = tk.BooleanVar(value=True)
+special_chars_check = ttk.Checkbutton(advanced_frame, text="Caractères spéciaux (!@#...)", 
+                                    variable=special_chars_var)
+special_chars_check.grid(row=0, column=0, sticky='w', pady=2)
+
+numbers_var = tk.BooleanVar(value=True)
+numbers_check = ttk.Checkbutton(advanced_frame, text="Chiffres (0-9)", 
+                               variable=numbers_var)
+numbers_check.grid(row=1, column=0, sticky='w', pady=2)
+
+uppercase_var = tk.BooleanVar(value=True)
+uppercase_check = ttk.Checkbutton(advanced_frame, text="Lettres majuscules (A-Z)", 
+                                variable=uppercase_var)
+uppercase_check.grid(row=2, column=0, sticky='w', pady=2)
+
+advanced_frame.grid(row=5, column=0, columnspan=2, pady=(0, 20), sticky='ew')
+advanced_frame.grid_remove()
+
+password_label = ttk.Label(main_frame, text="Mot de passe généré", font=('Helvetica', 12))
+password_label.grid(row=6, column=0, sticky='w', pady=(10, 5))
+
+password_frame = ttk.Frame(main_frame, style='TFrame')
+password_frame.grid(row=7, column=0, columnspan=2, sticky='ew')
+
+password_entry = ttk.Entry(password_frame, font=('Helvetica', 14), width=25)
+password_entry.pack(side='left', fill='x', expand=True, ipady=8)
+
+copy_button = ttk.Button(password_frame, text="📋", width=3, command=copy_to_clipboard)
+copy_button.pack(side='right', padx=(5, 0))
+
+generate_button = ttk.Button(main_frame, text="Générer mot de passe", 
+                           command=generate_password, style='TButton')
+generate_button.grid(row=8, column=0, columnspan=2, pady=(20, 5), sticky='ew')
+
+status_label = tk.Label(main_frame, text="", font=('Helvetica', 10), bg=BG_COLOR, fg=TEXT_COLOR)
+status_label.grid(row=9, column=0, columnspan=2, pady=(5, 0))
+
+footer_frame = ttk.Frame(window, style='TFrame')
+footer_frame.pack(side='bottom', pady=(0, 20))
+
+footer_label = ttk.Label(footer_frame, text="© 2025 Gen Password - Tous droits réservés", 
+                        font=('Helvetica', 9), foreground=SECONDARY_COLOR)
+footer_label.pack()
 
 window.mainloop()
